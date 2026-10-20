@@ -1,11 +1,12 @@
-name: CD (Main Branch)
+name: CD (develop -> dev, main -> prod)
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "develop", "main" ]
 
 jobs:
-  cd:
+  deploy-dev:
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
     environment: dev
     steps:
@@ -14,13 +15,34 @@ jobs:
       - name: Create deployment package
         run: zip -r app.zip . -x '*.git*' '*__pycache__*' '*.pytest_cache*'
 
-      - name: Deploy to AWS Elastic Beanstalk
+      - name: Deploy to Student-cdcd-api-env-dev
         uses: einaregilsson/beanstalk-deploy@v22
         with:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           application_name: "Student-cdcd-api"
-          environment_name: "Student-cdcd-api-env"
+          environment_name: "Student-cdcd-api-env-dev"
           region: "eu-central-1"
-          version_label: "build-${{ github.run_id }}"
+          version_label: "dev-build-${{ github.run_id }}"
+          deployment_package: "app.zip"
+
+  deploy-prod:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: prod
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create deployment package
+        run: zip -r app.zip . -x '*.git*' '*__pycache__*' '*.pytest_cache*'
+
+      - name: Deploy to Student-cdcd-api-env-prod
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          application_name: "Student-cdcd-api"
+          environment_name: "Student-cdcd-api-env-prod"
+          region: "eu-central-1"
+          version_label: "prod-build-${{ github.run_id }}"
           deployment_package: "app.zip"
